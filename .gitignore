@@ -1,0 +1,141 @@
+# =========================
+
+# Go Build Files
+
+# =========================
+
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binaries
+
+*.test
+
+# Output of go build
+
+*.out
+
+# =========================
+
+# Go Modules
+
+# =========================
+
+go.work
+go.work.sum
+
+# Vendor (optional: include if you use vendoring)
+
+vendor/
+
+# =========================
+
+# Logs & Runtime Files
+
+# =========================
+
+*.log
+logs/
+*.pid
+*.seed
+
+# =========================
+
+# Environment Variables
+
+# =========================
+
+.env
+.env.*
+*.env
+
+# =========================
+
+# IDE / Editor Files
+
+# =========================
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+
+# OS Files
+
+# =========================
+
+.DS_Store
+Thumbs.db
+
+# =========================
+
+# Coverage & Profiling
+
+# =========================
+
+coverage.out
+*.coverprofile
+*.prof
+
+# =========================
+
+# Database / Storage
+
+# =========================
+
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# bbolt files (important for your project)
+
+*.bolt
+*.db
+
+# =========================
+
+# Docker
+
+# =========================
+
+docker-compose.override.yml
+
+# =========================
+
+# Temporary Files
+
+# =========================
+
+tmp/
+temp/
+
+# =========================
+
+# Generated Files (protobuf, etc.)
+
+# =========================
+
+*.pb.go
+
+# =========================
+
+# Misc
+
+# =========================
+
+*.bak
+*.tmp
+
+#==========================
+
+distributed_kv_store.pdf

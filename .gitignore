@@ -138,4 +138,5 @@ temp/
 
 #==========================
 
-distributed_kv_store.pdf
+config
+public

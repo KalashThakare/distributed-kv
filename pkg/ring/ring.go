@@ -58,7 +58,7 @@ func (r *Ring) AddNode(name string) {
 	for i:=0; i<VirtualNodes; i++{
 		vkey := fmt.Sprintf("%s#%d", name, i)
 		vnode := VNode{
-			Hash: hashKey(vkey),
+			Hash: HashKey(vkey),
 			Name: name,
 		}
 
@@ -99,7 +99,7 @@ func (r *Ring) GetNode(key string) string {
 		return  ""	
 	}
 
-	h := hashKey(key)
+	h := HashKey(key)
 
 	idx := sort.Search(len(r.vnodes), func(i int) bool {
 		return r.vnodes[i].Hash >= h
@@ -111,5 +111,30 @@ func (r *Ring) GetNode(key string) string {
 
 	return r.vnodes[idx].Name
 }
+
+
+func (r *Ring) Nodes() []string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	names := make([]string, 0, len(r.nodes))
+
+	for name := range r.nodes{
+		names = append(names, name)
+	}
+
+	sort.Strings(names)
+	return names
+}
+
+// Size of the ring
+
+func (r *Ring) Size() int{
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	return len(r.nodes)
+}
+
 
 

@@ -24,7 +24,7 @@ func TestGetNode_SingleNode(t *testing.T) {
 	for _, key := range keys {
 		got := r.GetNode(key)
 		if got != "NodeA" {
-			t.Errorf("key %s: want NodeA, got %d", key, got)
+			t.Errorf("key %q: want NodeA, got %q", key, got)
 		}
 	}
 }
@@ -44,7 +44,7 @@ func TestGetNode_Consistency(t *testing.T) {
 	for i := 0; i < 100; i++ {
 		got := r.GetNode(key)
 		if got != first {
-			t.Errorf("iteration %d: want %q, got %q", i, first, got)
+			t.Errorf("iteration %d	: want %q, got %q", i, first, got)
 		}
 	}
 }

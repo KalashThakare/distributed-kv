@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -35,28 +36,47 @@ type Config struct {
 	BoltPath string //file path where your database is stored on disk using bbolt (BoltDB).
 }
 
-// func Open(cfg Config) (*Store, error) {
-// 	s := &Store{
-// 		mem:       make(map[string]string),
-// 		stopFlush: make(chan struct{}),
-// 	}
+func Open(cfg Config) (*Store, error) {
+	s := &Store{
+		mem:       make(map[string]string),
+		stopFlush: make(chan struct{}),
+	}
 
-// 	if cfg.BoltPath != "" {
-// 		db, err := bolt.Open(cfg.BoltPath, 0600, &bolt.Options{
-// 			Timeout: 1 * time.Second,
-// 		})
-// 		if err != nil {
-// 			return nil, fmt.Errorf("open bbolt: %w", err)
-// 		}
+	if cfg.BoltPath != "" {
+		db, err := bolt.Open(cfg.BoltPath, 0600, &bolt.Options{
+			Timeout: 1 * time.Second,
+		})
+		if err != nil {
+			return nil, fmt.Errorf("open bbolt: %w", err)
+		}
 
-// 		s.db = db
+		s.db = db
 
-// 		if err := s.loadFromBolt(); err != nil {
-// 			return nil, fmt.Errorf("load from bbolt: %w", err)
-// 		}
+		if err := s.loadFromBolt(); err != nil {
+			return nil, fmt.Errorf("load from bbolt: %w", err)
+		}
+	}
 
-// 	}
-// }
+	if cfg.WALPath != "" {
+		wal, err := openWAL(cfg.WALPath)
+		if err != nil {
+			return nil, fmt.Errorf("open WAL: %w", err)
+		}
+
+		s.wal = wal
+
+		if err := s.wal.Replay(s.mem); err != nil {
+			return nil, fmt.Errorf("replay WAL: %w", err)
+		}
+	}
+
+	// Step 3: start background goroutine that flushes memory to bbolt
+	if s.db != nil {
+		s.wg.Add(1)
+		go s.flushLoop()
+	}
+	return s, nil
+}
 
 func (s *Store) loadFromBolt() error {
 	return s.db.Update(func(tx *bolt.Tx) error {
@@ -94,4 +114,24 @@ func (s *Store) flushToBolt() error {
 		}
 		return nil
 	})
+}
+
+func (s *Store) flushLoop() {
+	defer s.wg.Done()
+	ticker := time.NewTicker(FlushInterval)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if err := s.flushToBolt(); err != nil {
+				// Log the error but keep running — WAL protects us
+				fmt.Fprintf(os.Stderr, "flush to bbolt: %v\n", err)
+			} else if s.wal != nil {
+				// Safe to truncate WAL after successful flush
+				_ = s.wal.Truncate()
+			}
+		case <-s.stopFlush:
+			return
+		}
+	}
 }

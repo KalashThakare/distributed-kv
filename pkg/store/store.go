@@ -135,3 +135,34 @@ func (s *Store) flushLoop() {
 		}
 	}
 }
+
+func (s *Store) Delete(key string) error {
+	if s.wal != nil {
+		if err := s.wal.Append(OpDelete, key, ""); err != nil{
+			return fmt.Errorf("WAL append: %w", err)
+		}
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.mem, key)
+	return nil
+}
+
+func (s *Store) Keys() []string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	keys := make([]string, 0, len(s.mem))
+	for key := range s.mem{
+		keys = append(keys, key)
+	}
+
+	return keys
+}
+
+func (s *Store) Size() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.mem)
+}

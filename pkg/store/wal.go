@@ -86,3 +86,29 @@ func (w *WAL) Truncate() error {
 	_, err := w.file.Seek(0, io.SeekStart)
 	return err
 }
+
+func (w *WAL) Append(op Op, key, value string) error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	klen := uint32(len(key))
+	vlen := uint32(len(value))
+
+	header := make([]byte, 9)
+	header[0] = byte(op)
+
+	binary.BigEndian.PutUint32(header[1:5], klen)
+	binary.BigEndian.PutUint32(header[5:9], vlen)
+
+	if _, err := w.file.Write(header); err != nil {
+		return fmt.Errorf("WAL write header: %w", err)
+	}
+
+	if len(value) > 0 {
+		if _, err := w.file.Write([]byte(value)); err != nil {
+			return fmt.Errorf("WAL write value: %w", err)
+		}
+	}
+
+	return w.file.Sync()
+}

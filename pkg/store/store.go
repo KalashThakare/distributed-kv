@@ -166,3 +166,25 @@ func (s *Store) Size() int {
 	defer s.mu.RUnlock()
 	return len(s.mem)
 }
+
+func (s *Store) Close() error {
+	if s.db != nil{
+		close(s.stopFlush)
+		s.wg.Wait()
+
+		if err := s.flushToBolt(); err != nil{
+			return fmt.Errorf("final flush: %w", err)
+		}
+		if s.wal != nil{
+			_ = s.wal.Truncate()
+		}
+		if err :=  s.db.Close(); err != nil{
+			return fmt.Errorf("close bbolt: %w", err)
+		}
+	}
+
+	if s.wal != nil{
+		return s.wal.Close()
+	}
+	return nil
+}

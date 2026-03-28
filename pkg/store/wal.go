@@ -112,3 +112,13 @@ func (w *WAL) Append(op Op, key, value string) error {
 
 	return w.file.Sync()
 }
+
+
+func (w *WAL) Close() error {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	_ = w.file.Sync()
+
+	return w.file.Close()
+}

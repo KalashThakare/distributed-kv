@@ -136,6 +136,28 @@ func (s *Store) flushLoop() {
 	}
 }
 
+func (s *Store) Put(key, value string) error {
+	if s.wal != nil{
+		if err := s.wal.Append(OpSet, key, value); err != nil{
+			return fmt.Errorf("WAL: %w", err)
+		}
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.mem[key] = value
+	return nil
+}
+
+func (s *Store) Get(key string) (string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	v, ok := s.mem[key]
+	if !ok {
+		return "", ErrKeyNotFound
+	}
+	return v, nil
+} 
+
 func (s *Store) Delete(key string) error {
 	if s.wal != nil {
 		if err := s.wal.Append(OpDelete, key, ""); err != nil{
@@ -166,6 +188,7 @@ func (s *Store) Size() int {
 	defer s.mu.RUnlock()
 	return len(s.mem)
 }
+
 
 func (s *Store) Close() error {
 	if s.db != nil{

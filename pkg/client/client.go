@@ -1,7 +1,9 @@
 package client
 
 import (
+	"context"
 	"fmt"
+	"time"
 
 	"github.com/KalashThakare/distributed-kv/pkg/pb"
 	"google.golang.org/grpc"
@@ -9,28 +11,28 @@ import (
 )
 
 type Client struct {
-	conn *grpc.ClientConn
+	conn   *grpc.ClientConn
 	client pb.KVStoreClient // generated stub
-	addr string
+	addr   string
 }
 
 // New connects to the server at the given address and returns a client.
 // It doesn’t actually connect immediately — it waits until you make the first request.
 // Example address: "localhost:8082"
 
-func  New(addr string) (*Client, error) {
+func New(addr string) (*Client, error) {
 	conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithDefaultCallOptions(
 		grpc.MaxCallRecvMsgSize(4*1024*1024), // 4MB message size maximum
-	),)
+	))
 
-	if err != nil{
+	if err != nil {
 		return nil, fmt.Errorf("dial %s: %w", addr, err)
 	}
 
 	return &Client{
-		conn: conn,
+		conn:   conn,
 		client: pb.NewKVStoreClient(conn),
-		addr: addr,
+		addr:   addr,
 	}, nil
 }
 
@@ -38,3 +40,40 @@ func (c *Client) Close() error {
 	return c.conn.Close()
 }
 
+func defaultCtx() (context.Context, context.CancelFunc) {
+	return context.WithTimeout(context.Background(), 5*time.Second)
+}
+
+func (c *Client) Get(key string) (value string, found bool, err error) {
+	ctx, cancel := defaultCtx()
+	defer cancel()
+	resp, err := c.client.Get(ctx, &pb.GetRequest{Key: key})
+	if err != nil {
+		return "", false, fmt.Errorf("Get %q from %s: %w", key, c.addr, err)
+	}
+	return resp.Value, resp.Found, nil
+}
+
+func (c *Client) Put(key, value string) error {
+	ctx, cancle := defaultCtx()
+	defer cancle()
+
+	_, err := c.client.Put(ctx, &pb.PutRequest{Key: key, Value: value})
+	if err != nil {
+		return fmt.Errorf("Put %q to %s: %w", key, c.addr, err)
+	}
+
+	return nil
+}
+
+func (c *Client) Delete(key string) error {
+	ctx, cancel := defaultCtx()
+	defer cancel()
+
+	_, err := c.client.Delete(ctx, &pb.DeleteRequest{Key: key})
+	if err != nil {
+		return fmt.Errorf("Delete %q from %s: %w", key, c.addr, err)
+	}
+	
+	return nil
+}

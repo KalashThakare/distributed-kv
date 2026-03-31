@@ -7,7 +7,9 @@ import (
 
 	"github.com/KalashThakare/distributed-kv/pkg/pb"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/status"
 )
 
 type Client struct {
@@ -96,8 +98,13 @@ func (c *Client) Health() (node_name string, key_count int, err error) {
 
 	resp, err := c.client.Health(ctx, &pb.HealthRequest{})
 	if err != nil {
-		return "", 0, fmt.Errorf("Health %s: %w", c.addr, err) 
+		return "", 0, fmt.Errorf("Health %s: %w", c.addr, err)
 	}
 
 	return resp.NodeName, int(resp.KeyCount), nil
+}
+
+func IsNotFound(err error) bool {
+	st, ok := status.FromError(err)
+	return ok && st.Code() == codes.NotFound
 }

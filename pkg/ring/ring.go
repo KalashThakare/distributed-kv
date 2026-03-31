@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"sort"
 	"sync"
+
 )
 
 // type Ring interface {
@@ -17,15 +18,15 @@ import (
 
 const VirtualNodes = 150
 
-type VNode struct{
+type VNode struct {
 	Hash uint32
 	Name string
 }
 
-type Ring struct{
-	mu sync.RWMutex
+type Ring struct {
+	mu     sync.RWMutex
 	vnodes []VNode
-	nodes map[string]struct{}
+	nodes  map[string]struct{}
 }
 
 func New() *Ring {
@@ -36,8 +37,8 @@ func New() *Ring {
 
 func HashKey(key string) uint32 {
 	h := fnv.New32a()
-	_, err := h.Write([]byte (key))
-	if err != nil{
+	_, err := h.Write([]byte(key))
+	if err != nil {
 		slog.Error("Error converting")
 	}
 	return h.Sum32()
@@ -55,7 +56,7 @@ func (r *Ring) AddNode(name string) {
 
 	r.nodes[name] = struct{}{}
 
-	for i:=0; i<VirtualNodes; i++{
+	for i := 0; i < VirtualNodes; i++ {
 		vkey := fmt.Sprintf("%s#%d", name, i)
 		vnode := VNode{
 			Hash: HashKey(vkey),
@@ -80,8 +81,8 @@ func (r *Ring) RemoveNode(name string) {
 	delete(r.nodes, name)
 
 	filtered := r.vnodes[:0]
-	for _, vn := range r.vnodes{
-		if vn.Name != name{
+	for _, vn := range r.vnodes {
+		if vn.Name != name {
 			filtered = append(filtered, vn)
 		}
 	}
@@ -96,7 +97,7 @@ func (r *Ring) GetNode(key string) string {
 	defer r.mu.RUnlock()
 
 	if len(r.vnodes) == 0 {
-		return  ""	
+		return ""
 	}
 
 	h := HashKey(key)
@@ -105,13 +106,12 @@ func (r *Ring) GetNode(key string) string {
 		return r.vnodes[i].Hash >= h
 	})
 
-	if idx == len(r.vnodes){
+	if idx == len(r.vnodes) {
 		idx = 0
 	}
 
 	return r.vnodes[idx].Name
 }
-
 
 func (r *Ring) Nodes() []string {
 	r.mu.Lock()
@@ -119,7 +119,7 @@ func (r *Ring) Nodes() []string {
 
 	names := make([]string, 0, len(r.nodes))
 
-	for name := range r.nodes{
+	for name := range r.nodes {
 		names = append(names, name)
 	}
 
@@ -129,12 +129,37 @@ func (r *Ring) Nodes() []string {
 
 // Size of the ring
 
-func (r *Ring) Size() int{
+func (r *Ring) Size() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
 	return len(r.nodes)
 }
 
+func (r *Ring) GetN(key string, n int) []string {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
 
+	if len(r.vnodes) == 0 || n <= 0 {
+		return nil
+	}
 
+	h := HashKey(key)
+
+	idx := sort.Search(len(r.vnodes), func(i int) bool {
+		return r.vnodes[i].Hash >= h
+	})
+
+	seen := make(map[string]bool)
+	result := make([]string, 0, n)
+
+	for len(result) < n && len(result) < len(r.nodes) {
+		name := r.vnodes[idx%len(r.vnodes)].Name
+		if !seen[name] {
+			seen[name] = true
+			result = append(result, name)
+		}
+		idx++
+	}
+	return result
+}

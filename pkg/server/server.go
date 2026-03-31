@@ -1,13 +1,13 @@
 package server
 
 import (
-	"container/ring"
 	"context"
 	"errors"
 	"fmt"
 	"net"
 
 	"github.com/KalashThakare/distributed-kv/pkg/pb"
+	"github.com/KalashThakare/distributed-kv/pkg/ring"
 	"github.com/KalashThakare/distributed-kv/pkg/store"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -72,8 +72,8 @@ func (s *Server) Get(ctx context.Context, req *pb.GetRequest) (*pb.GetResponse, 
 	}
 
 	val, err := s.store.Get(req.Key)
-	if err != nil{
-		if errors.Is(err, store.ErrKeyNotFound){
+	if err != nil {
+		if errors.Is(err, store.ErrKeyNotFound) {
 			// Return NOT_FOUND with the found=false flag.
 			return &pb.GetResponse{Found: false}, nil
 		}
@@ -101,14 +101,36 @@ func (s *Server) Put(ctx context.Context, req *pb.PutRequest) (*pb.PutResponse, 
 //============= DeleteRequest gRPC handler================
 
 func (s *Server) Delete(ctx context.Context, req *pb.DeleteRequest) (*pb.DeleteResponse, error) {
-	if req.Key == ""{
+	if req.Key == "" {
 		return nil, status.Error(codes.InvalidArgument, "Key must not be empty")
 	}
 
-	if err := s.store.Delete(req.Key); err != nil{
+	if err := s.store.Delete(req.Key); err != nil {
 		return nil, status.Errorf(codes.Internal, "Delete %q: %v", req.Key, err)
 	}
 
 	return &pb.DeleteResponse{}, nil
 }
 
+func (s *Server) GetN(ctx context.Context, req *pb.GetNRequest) (*pb.GetNResponse, error) {
+	if req.Key == "" {
+		return nil, status.Error(codes.InvalidArgument, "Key must not be empty")
+	}
+
+	if req.N <= 0 {
+		return nil, status.Error(codes.InvalidArgument, "n must be > 0")
+	}
+
+	nodes := s.ring.GetN(req.Key, int(req.N))
+
+	return &pb.GetNResponse{Nodes: nodes}, nil
+}
+
+func (s *Server) Health(ctx context.Context, req *pb.HealthRequest) (*pb.HealthResponse, error) {
+	
+	return &pb.HealthResponse{
+		NodeName: s.name,
+		KeyCount: int64(s.store.Size()),
+	}, nil
+
+}

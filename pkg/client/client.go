@@ -74,6 +74,30 @@ func (c *Client) Delete(key string) error {
 	if err != nil {
 		return fmt.Errorf("Delete %q from %s: %w", key, c.addr, err)
 	}
-	
+
 	return nil
+}
+
+func (c *Client) GetN(key string, n int) (nodes []string, err error) {
+	ctx, cancel := defaultCtx()
+	defer cancel()
+
+	resp, err := c.client.GetN(ctx, &pb.GetNRequest{Key: key, N: int32(n)})
+	if err != nil {
+		return nil, fmt.Errorf("GetN %q from %s: %w", key, c.addr, err)
+	}
+
+	return resp.Nodes, nil
+}
+
+func (c *Client) Health() (node_name string, key_count int, err error) {
+	ctx, cancel := defaultCtx()
+	defer cancel()
+
+	resp, err := c.client.Health(ctx, &pb.HealthRequest{})
+	if err != nil {
+		return "", 0, fmt.Errorf("Health %s: %w", c.addr, err) 
+	}
+
+	return resp.NodeName, int(resp.KeyCount), nil
 }

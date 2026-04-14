@@ -226,10 +226,10 @@ func (c *Cluster) Members() []string {
 	return names
 }
 
-func (c *Cluster) MembersCount() (int, error) {
+func (c *Cluster) MembersCount() int {
 	count := c.ml.NumMembers()
 
-	return count, nil
+	return count
 }
 
 // LocalNode returns the memberlist.Node for this node.

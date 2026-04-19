@@ -96,11 +96,11 @@ curl http://localhost:8080/get?key=hello
 - [x] **Day 1** — Consistent hashing for key distribution across nodes
 - [x] **Day 2** — Storage engine: in-memory map + write-ahead log + bbolt persistence
 - [x] **Day 3** — gRPC communication between nodes
+- [x] **Day 4** — Decentralised node discovery and failure detection
+- [x] **Day 5** — Replicate keys across multiple nodes for fault tolerance
 
 ### 🔄 In Progress / Upcoming
 
-- [ ] **Gossip Protocol (SWIM)** — Decentralised node discovery and failure detection
-- [ ] **Replication** — Replicate keys across multiple nodes for fault tolerance
 - [ ] **Hinted Handoff** — Buffer writes for unavailable nodes and deliver them on recovery
 - [ ] **Metrics** — Prometheus instrumentation + Grafana dashboards
 - [ ] **Chaos Testing** — Simulate node failures, network partitions, and recovery scenarios

@@ -174,7 +174,7 @@ func (c *Cluster) readFromNode(nodeName, key string) readResult {
 	}
 
 	cl := c.PeerClient(nodeName)
-	if cl != nil {
+	if cl == nil {
 		return readResult{node: nodeName, err: fmt.Errorf("no client for %s", nodeName)}
 	}
 

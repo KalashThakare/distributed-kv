@@ -16,6 +16,7 @@ type Cluster struct {
 	selfAddr string
 	ring     *ring.Ring
 	store    *store.Store
+	handoff  *Hintedhandoff
 	mu       sync.RWMutex
 	ml       *memberlist.Memberlist
 	peers    map[string]*client.Client
@@ -35,6 +36,7 @@ func New(cfg Config) (*Cluster, error) {
 		selfAddr: cfg.GRPCaddress,
 		ring:     cfg.Ring,
 		store:    cfg.Store,
+		handoff:  NewHintedHandoff(24 * time.Hour),
 		peers:    make(map[string]*client.Client),
 	}
 

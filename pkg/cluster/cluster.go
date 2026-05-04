@@ -36,7 +36,7 @@ func New(cfg Config) (*Cluster, error) {
 		selfAddr: cfg.GRPCaddress,
 		ring:     cfg.Ring,
 		store:    cfg.Store,
-		handoff:  NewHintedHandoff(24 * time.Hour),
+		handoff:  NewHintedHandoff(1 * time.Hour),
 		peers:    make(map[string]*client.Client),
 	}
 
@@ -90,6 +90,12 @@ func (c *Cluster) onNodeJoin(name, grpcAddr string) {
 	c.mu.Lock()
 	c.peers[name] = cl
 	c.mu.Unlock()
+
+	go func ()  {
+		if err := c.handoff.Replay(name, cl); err != nil{
+			fmt.Printf("[%s] hint replay for %s: %v\n", c.selfName, name, err)
+		}
+	}()
 
 	fmt.Printf("[%s] ring now has %d nodes\n", c.selfName, c.ring.Size())
 }

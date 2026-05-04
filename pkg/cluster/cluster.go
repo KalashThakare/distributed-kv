@@ -20,6 +20,7 @@ type Cluster struct {
 	mu       sync.RWMutex
 	ml       *memberlist.Memberlist
 	peers    map[string]*client.Client
+	ae       *AntiEntropy
 }
 
 type Config struct {
@@ -66,6 +67,9 @@ func New(cfg Config) (*Cluster, error) {
 		return nil, fmt.Errorf("create memberlist: %w", err)
 	}
 
+	c.ae = NewAntiEntropy(c, 5*time.Minute)
+	c.ae.Start()
+
 	c.ml = ml
 	return c, nil
 }
@@ -91,8 +95,8 @@ func (c *Cluster) onNodeJoin(name, grpcAddr string) {
 	c.peers[name] = cl
 	c.mu.Unlock()
 
-	go func ()  {
-		if err := c.handoff.Replay(name, cl); err != nil{
+	go func() {
+		if err := c.handoff.Replay(name, cl); err != nil {
 			fmt.Printf("[%s] hint replay for %s: %v\n", c.selfName, name, err)
 		}
 	}()
@@ -153,11 +157,13 @@ func (c *Cluster) Shutdown() error {
 	}
 	c.mu.Unlock()
 
+	c.ae.Stop()
+
 	return c.ml.Shutdown()
 
 }
 
-func (c *Cluster) put(key, value string) error {
+func (c *Cluster) Put(key, value string) error {
 	owner := c.ring.GetNode(key)
 
 	if owner == c.selfName || owner == "" {
